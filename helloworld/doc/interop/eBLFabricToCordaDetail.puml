@@ -1,0 +1,52 @@
+@startuml
+Carrier -> Carrier_FabricNode: Store eBL
+Carrier_FabricNode --> eBL_ChainCode: store eBL
+Carrier -> Carrier_FabricNode: Transfer eBL to Advising Bank
+Carrier_FabricNode --> eBL_ChainCode: Transfer eBL to Advising Bank
+eBL_ChainCode -> eBL_ChainCode: create new 'eBL transfer Owner' Interop transaction (itx)
+eBL_ChainCode -> eBL_ChainCode: add json payload of eBL to itx
+eBL_ChainCode -> eBL_ChainCode: sign eBL itx with ed25519 and carrier Private key
+eBL_ChainCode -> Interop_ChainCode: Call 'InteropSend' send to Advising bank.
+Interop_ChainCode -> Interop_ChainCode: create a GUID and add it to the itx
+Interop_ChainCode -> Interop_ChainCode: create HMAC of eBL payload and add to itx
+Interop_ChainCode -> Interop_ChainCode: put the eBL itx details and send parameters into escrow state
+Interop_ChainCode -> Carrier_FabricNode: Publish 'InteropSend' event containing 'eBL transfer Owner' itx payload
+Carrier_FabricNode -> FabricListener: Publish 'InteropSend' event
+Carrier_FabricNode -> Advising_CordaNode : send 'InteropSend' event containign eBL Transfer Owner' itx as jsonRpc
+Advising_CordaNode -> CordaInteropApi: call 'InteropReceive'
+CordaInteropReceiveFlow -> CordaInteropReceiveFlow : locate eBL Flow
+CordaInteropReceiveFlow -> eBL_Flow: call eBLTransferOwner Flow
+eBL_Flow -> eBL_Flow: create eBL (Corda) output state from json payload
+eBL_Flow -> eBL_Flow: create (Corda) txn with eBL
+eBL_Flow -> eBL_Flow: add Carrier & Advising signature to txn
+eBL_Flow -> CordaInteropReceiveFlow: receive signed tran from eBL
+CordaInteropReceiveFlow -> CordaInteropReceiveFlow: build InteropSend itx from txn
+CordaInteropSendFlow -> CordaInteropReceiveFlow: save itx (with Quasars?)
+CordaInteropReceiveFlow -> Carrier_FabricNode: send itx to InteropSendAck endpoint
+Carrier_FabricNode -> Interop_Chaincode: call 'InteropSendAck' Rest/JsonRpc method
+Interop_Chaincode -> eBL_ChainCode : call 'eBL transfer Owner Ack'
+eBL_ChainCode -> eBL_ChainCode : verify transaction signature by Advising bank
+eBL_ChainCode -> eBL_ChainCode : verify new owner of eBL is advising bank
+eBL_ChainCode -> eBL_ChainCode : update eBL with new Owner
+Interop_ChainCode -> Carrier_FabricNode: return txn Id
+Carrier_FabricNode -> CordaInteropReceiveFlow: return  fabric txn
+CordaInteropReceiveFlow -> CordaInteropReceiveFlow: notorise and save txn (which was returned from eBLFlow)
+@enduml
+
+#Notes:
+
+In order to sync up the two ledgers, we must consider the difference between 'issuing' the eBL and transfering ownership.
+In this case we are issuing the eBL onto Fabric, but then transfering ownership to the other entities - the advising bank
+in the first instance. To Corda, the initial transfer will look like an issue of state, so our transfer eBL Ownership flow, must
+take into account if the state already exists (in which case it's an issue) or if it already exists (in which case it's a transfer)
+We also need to consider how the eBL is kept up to date between the ledger, so that we don't get ourselves into an transaction loop;
+if fabric issues the change of owner, then we don't want to Corda to send back another change of owner command. But if Corda
+does change of owner then we do want to set the update back to Fabric- Currently I resolve this by having an 'Ack' message and end point
+on the receiving ledger.
+
+Note: when the CordaInteropReceive flow gets the fabric transaction back, this transaction will not necessarily be committed, so we would
+need an additional bit to confirm this - in fabric 0.6 it's not easy to find if the tx has been commited, so we should defer this to V1.0
+when it becomes available.
+
+
+

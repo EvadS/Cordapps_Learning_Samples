@@ -1,0 +1,20 @@
+{
+  "interopTxPayload": {
+    "sourceLedgerId": 'Fabric01",
+    "destinationNode": "advisingbankserver:80",
+    "contractAddress": "EF443545453443544343434FEFEF",
+    "contractFunction": "transferEbLOwner",
+    "functionPayload": {
+      "eBL": {
+        "carrierName": "happy shipping co",
+        "owner": "AdvisingBankPublicKey"
+      }
+    },
+    "ed25519signatures": [
+      "etc",
+      "etc1"
+    ],
+    "transactionId":"SOMEGUID",
+  },
+  "payloadHMAC": "blahbalh"
+}

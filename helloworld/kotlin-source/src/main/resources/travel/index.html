@@ -1,0 +1,344 @@
+<!--
+--------
+WARNING:
+--------
+THIS CODE IS ONLY MADE AVAILABLE FOR DEMONSTRATION PURPOSES AND IS NOT SECURE! DO NOT USE IN PRODUCTION!
+FOR SECURITY REASONS, USING A JAVASCRIPT WEB APP HOSTED VIA THE CORDA NODE IS NOT THE RECOMMENDED WAY TO INTERFACE
+WITH CORDA NODES! HOWEVER, FOR THIS PRE-ALPHA RELEASE IT'S A USEFUL WAY TO EXPERIMENT WITH THE PLATFORM AS IT ALLOWS
+YOU TO QUICKLY BUILD A UI FOR DEMONSTRATION PURPOSES.
+GOING FORWARD WE RECOMMEND IMPLEMENTING A STANDALONE WEB SERVER THAT AUTHORISES VIA THE NODE'S RPC INTERFACE. IN THE
+COMING WEEKS WE'LL WRITE A TUTORIAL ON HOW BEST TO DO THIS.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CorDapp Hello World - Travel</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+          integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css"
+          integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
+            integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+            crossorigin="anonymous"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.0-rc.1/angular.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/angular-ui-bootstrap/2.2.0/ui-bootstrap-tpls.min.js"></script>
+    <script src="angular-module.js"></script>
+    <style>
+        .modal-dialog {
+            width: 800px;
+        }
+         body {
+            font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+            font-size: 14px;
+            line-height: 1.42857143;
+            color: #333;
+            background-color: #D3D3D3;
+      }
+      .button {
+        background-color: #1E1C1C;
+        text-align: center;
+        cursor: pointer;
+        button-radius: 5px;
+        padding: 5px;
+        padding-left: 10px;
+        padding-right: 10px;
+        border: none;
+        color: #ffffff;
+        border-radius: 15px;
+    }
+      .button-main {
+         background-color: #1E1C1C;
+         border: none;
+         color: white;
+         padding: 12px 32px;
+         text-align: center;
+         text-decoration: none;
+         display: inline-block;
+         font-size: 16px;
+         margin: 4px 2px;
+         cursor: pointer;
+         border-radius: 15px;
+    }
+    .btn-ticket {
+         background-color:#ffffff;
+         border: none;
+         color: #1E1C1C;
+         padding: 6px 8px;
+         text-align: center;
+         text-decoration: none;
+         display: inline-block;
+         font-size: 16px;
+         margin: -5px 2px;
+         cursor: pointer;
+         border-radius: 15px;
+    }
+    .panel-heading {
+        margin-top: 0;
+        margin-bottom: 0;
+        font-size: 16px;
+        color: inherit;
+    }
+
+    .panel-primary>.panel-heading {
+       border-color: #1E1C1C;
+       background-image: -webkit-linear-gradient(top,#1E1C1C 0,#1E1C1C 100%);
+
+    }
+    .panel-default{
+        border-color: #1E1C1C;
+    }
+
+    .panel{
+        margin-bottom:0px;
+    }
+
+    .panel-gap{
+       margin-bottom:10px;
+    }
+    </style>
+</head>
+<body ng-app="demoAppModule" ng-controller="DemoAppController as demoApp">
+<nav class="navbar navbar-default">
+    <div class="container-fluid">
+        <!--<button ng-click="demoApp.openCreateTicketModal()" type="button" class="button-main">Create Flight Ticket</button>-->
+        <div class="navbar-header" style="float: right;width:35%;">
+            <a class="navbar-brand" style="color:##1E1C1C;" href="#"><strong>Node Owner</strong> - {{demoApp.thisNode}} | <strong>Peers</strong> - {{demoApp.thisPeers}}</a>
+        </div>
+    </div>
+</nav>
+<script type="text/ng-template" id="createTicketModal.html">
+    <div class="modal-header">
+        <h4 class="modal-title">Add Flight Ticket</h4>
+    </div>
+    <form>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="airlineName" class="control-label">Airline:</label>
+                <select ng-model="modalInstance.form.airlineName" class="form-control" id="airlineName">
+                    <option value="Qantas">Qantas</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="flightInsurerName" class="control-label">Insurer:</label>
+                <select ng-model="modalInstance.form.flightInsurerName" class="form-control" id="flightInsurerName">
+                    <option value="CBA">CBA</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="currency" class="control-label">Currency:</label>
+                <select ng-model="modalInstance.form.currency" class="form-control" id="currency">
+                    <option value="AUD">AUD</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="ticketNo" class="control-label">Ticket No:</label>
+                <input type="text" ng-model="modalInstance.form.ticketNo" class="form-control" id="ticketNo">
+            </div>
+            <div class="form-group">
+                <label for="passportNo" class="control-label">Passport No:</label>
+                <input type="text" ng-model="modalInstance.form.passportNo" class="form-control" id="passportNo">
+            </div>
+            <div class="form-group">
+                <label for="passportIssueDate" class="control-label">Passport Issue Date (yyyy-mm-dd):</label>
+                <input type="text" ng-model="modalInstance.form.passportIssueDate" class="form-control" id="passportIssueDate">
+            </div>
+            <div class="form-group">
+                <label for="passportExpiryDate" class="control-label">Passport Expiry Date (yyyy-mm-dd):</label>
+                <input type="text" ng-model="modalInstance.form.passportExpiryDate" class="form-control" id="passportExpiryDate">
+            </div>
+
+            <div class="form-group">
+                <label for="passengerName" class="control-label">Passenger Name:</label>
+                <input type="text" ng-model="modalInstance.form.passengerName" class="form-control" id="passengerName">
+            </div>
+            <div class="form-group">
+                <label for="passengerCount" class="control-label">Passenger Count (Int):</label>
+                <input type="text" ng-model="modalInstance.form.passengerCount" class="form-control" id="passengerCount">
+            </div>
+            <div class="form-group">
+                <label for="amount" class="control-label">Amount (Int):</label>
+                <input type="text" ng-model="modalInstance.form.amount" class="form-control" id="amount">
+            </div>
+
+
+            <div ng-show="modalInstance.formError" class="form-group">
+                <div class="alert alert-danger" role="alert">
+                    <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+                    <span class="sr-only">Error:</span>
+                    Enter valid flight ticket parameters
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button ng-click="modalInstance.cancel()" type="button" class="button">Close</button>
+            <button ng-click="modalInstance.create()" type="button" class="button">Create Ticket</button>
+        </div>
+    </form>
+</script>
+<script type="text/ng-template" id="messageContent.html">
+    <div class="modal-body" id="modal-body" style="text-align:center">
+        {{ modalInstanceTwo.message }}
+    </div>
+</script>
+
+<script type="text/ng-template" id="createTicketClaimModal.html">
+    <div class="modal-header" id="claim-modal-body">
+        <h4 class="modal-title">Add Ticket Claim</h4>
+    </div>
+    <form>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="airlineName" class="control-label">Airline:</label>
+                <select ng-model="claimModalInstance.form.airlineName" class="form-control" id="claimAirlineName">
+                    <option value="Qantas">Qantas</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="flightInsurerName" class="control-label">Insurer:</label>
+                <select ng-model="claimModalInstance.form.flightInsurerName" class="form-control" id="claimFlightInsurerName">
+                    <option value="CBA">CBA</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="currency" class="control-label">Currency:</label>
+                <select ng-model="claimModalInstance.form.currency" class="form-control" id="claimCurrency">
+                    <option value="AUD">AUD</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="ticketNo" class="control-label">Ticket No:</label>
+                <input type="text" ng-model="claimModalInstance.form.flightTicketNo" class="form-control" id="claimTicketNo">
+            </div>
+
+            <div class="form-group">
+                <label for="passportExpiryDate" class="control-label">Claim Date (yyyy-mm-dd):</label>
+                <input type="text" ng-model="claimModalInstance.form.claimDate" class="form-control" id="claimExpiryDate">
+            </div>
+
+            <div class="form-group">
+                <label for="passengerName" class="control-label">Passenger Name:</label>
+                <input type="text" ng-model="claimModalInstance.form.passengerName" class="form-control" id="claimPassengerName">
+            </div>
+
+            <div class="form-group">
+                <label for="amount" class="control-label">Claim Amount:</label>
+                <input type="number" ng-model="claimModalInstance.form.claimAmount" class="form-control" id="claimAmount">
+            </div>
+
+
+            <div ng-show="claimModalInstance.formError" class="form-group">
+                <div class="alert alert-danger" role="alert">
+                    <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+                    <span class="sr-only">Error:</span>
+                    Enter valid flight ticket parameters
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button ng-click="claimModalInstance.cancel()" type="button" class="button">Close</button>
+            <button ng-click="claimModalInstance.create()" type="button" class="button">Create Claim</button>
+        </div>
+    </form>
+</script>
+
+
+<div class="row">
+    <div class="col-md-1">
+    </div>
+    <div class="col-md-10">
+        <div ng-show="!demoApp.flightTickets.length" class="panel panel-primary panel-gap">
+            <div class="panel-heading">
+                <h3 class="panel-title">There are no recorded flight tickets
+                <button ng-click="demoApp.openCreateTicketModal()" type="button" class="btn-ticket" style="float: right">Create Flight Ticket</button></h3>
+            </div>
+            <div class="panel-body">Use the "Create Flight Ticket" button to create a ticket.</div>
+        </div>
+        <div ng-show="demoApp.flightTickets.length" class="panel panel-primary">
+            <div class="panel-heading">
+                <h3 class="panel-title">Flight Tickets<button ng-click="demoApp.openCreateTicketModal()" type="button" class="btn-ticket" style="float: right">Create Flight Ticket</button></h3>
+            </div>
+        </div>
+        <div ng-show="demoApp.flightTickets.length" class="panel panel-default panel-gap">
+            <div class="panel-body">
+                <table class="table table-condensed">
+                    <thead>
+                        <th>Ticket No</th>
+                        <th>Passenger</th>
+                        <th>Passport No</th>
+                        <th>Expiry Date</th>
+                        <th>Ticket Count</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </thead>
+                    <tbody>
+                        <tr ng-repeat="flightTicket in demoApp.flightTickets">
+                            <td>{{flightTicket.state.data.props.ticketNo}}</td>
+                            <td>{{flightTicket.state.data.props.passengerName}}</td>
+                            <td>{{flightTicket.state.data.props.passport.passportNo}}</td>
+                            <td>{{flightTicket.state.data.props.passport.passportExpiryDate[2]}}\{{flightTicket.state.data.props.passport.passportExpiryDate[1]}}\{{flightTicket.state.data.props.passport.passportExpiryDate[0]}}</td>
+                            <td>{{flightTicket.state.data.props.passengerCount}}</td>
+                            <td>{{flightTicket.state.data.props.amount}}</td>
+                            <td>{{flightTicket.state.data.status}}</td>
+                            <td>
+                                <button ng-show="flightTicket.state.data.status=='Open' && demoApp.isPassenger()"  ng-click="demoApp.openCreateTicketClaimModal(flightTicket)" type="button" class="button">Create Claim</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-1"></div>
+</div>
+<div class="row">
+    <div class="col-md-1">
+    </div>
+    <div class="col-md-10">
+        <div ng-show="!demoApp.flightClaims.length" class="panel panel-primary panel-gap">
+            <div class="panel-heading">
+                <h3 class="panel-title">There are no recorded claims for any flight tickets</h3>
+            </div>
+            <div class="panel-body">Use the "Create Claim" button to create a claim.</div>
+        </div>
+        <div ng-show="demoApp.flightClaims.length" class="panel panel-primary">
+            <div class="panel-heading">
+                <h3 class="panel-title">Ticket Claims</h3>
+            </div>
+        </div>
+
+        <div ng-show="demoApp.flightClaims.length" class="panel panel-default panel-gap">
+            <div class="panel-body">
+                <table class="table table-condensed">
+                    <thead>
+                        <th>Ticket No</th>
+                        <th>Passenger</th>
+                        <th>Claim Date</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="claim in demoApp.flightClaims">
+                        <td>{{claim.state.data.props.flightTicketNo}}</td>
+                        <td>{{claim.state.data.props.passengerName}}</td>
+                        <td>{{claim.state.data.props.claimDate[2]}}\{{claim.state.data.props.claimDate[1]}}\{{claim.state.data.props.claimDate[0]}}</td>
+                        <td>{{claim.state.data.props.claimAmount}}</td>
+                        <td>{{claim.state.data.status}}</td>
+                        <td>
+                            <button ng-show="claim.state.data.status=='Open' && demoApp.isAirline()"  ng-click="demoApp.approvalByAirline(claim)" type="button" class="button">Approve By Airline</button>
+                            <button ng-show="claim.state.data.status=='APPROVED_BY_AIRLINE' && demoApp.isInsurer()"  ng-click="demoApp.approvalByInsurer(claim)" type="button" class="button">Approve By Insurer</button>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-1"></div>
+</div>
+
+</body>
+</html>

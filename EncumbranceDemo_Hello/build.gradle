@@ -1,0 +1,111 @@
+group 'net.corda.demo'
+version '1.0'
+buildscript {
+    ext.corda_release_version = '3.1-corda'
+    ext.corda_gradle_plugins_version = '3.1.0'
+    ext.quasar_version = '0.7.9'
+    ext.junit_version = '4.12'
+    ext.corda_release_group = 'net.corda'
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        jcenter()
+        maven { url 'https://jitpack.io' }
+        maven { url 'https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases' }
+    }
+    dependencies {
+        classpath "net.corda.plugins:cordapp:$corda_gradle_plugins_version"
+        classpath "net.corda.plugins:cordformation:$corda_gradle_plugins_version"
+        classpath "net.corda.plugins:quasar-utils:$corda_gradle_plugins_version"
+    }
+}
+
+allprojects {
+    repositories {
+        mavenLocal()
+        jcenter()
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+        maven { url 'https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases' }
+    }
+    apply plugin: 'java'
+    sourceCompatibility = 1.8
+    apply plugin: 'net.corda.plugins.cordformation'
+    apply plugin: 'net.corda.plugins.quasar-utils'
+    apply plugin: 'net.corda.plugins.cordapp'
+
+    tasks.withType(JavaCompile) {
+        options.compilerArgs << '-parameters'
+    }
+}
+
+dependencies {
+    cordapp project(":encumbrance-state-contract")
+    cordapp project(":encumbrance-bakery")
+    cordapp project(":encumbrance-common")
+    cordapp project(":encumbrance-buyer")
+}
+task wrapper(type: Wrapper) {
+    gradleVersion = '4.4.1' //we want gradle 4.4.1 to run this project
+}
+project.ext {
+    Bakery_rpcPort = 10003
+    BuyerA_rpcPort = 10005
+    BuyerB_rpcPort= 10008
+}
+
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+    directory "./build/nodes"
+    node {
+        name "O=Notary,L=London,C=GB"
+        notary = [validating: true]
+        p2pPort 10002
+        rpcSettings {
+            address("localhost:10090")
+            adminAddress("localhost:10096")
+        }
+        cordapps = ["net.corda.demo.sc:encumbrance-state-contract:$version"]
+        rpcUsers = [[user: "user1", "password": "test", "permissions": ["ALL"]]]
+    }
+    node {
+        name "O=Bakery,L=London,C=GB"
+        rpcSettings {
+            address("localhost:" + project["Bakery_rpcPort"])
+            adminAddress("localhost:10046")
+        }
+        p2pPort 10004
+        cordapps = [
+                    "net.corda.demo.bakery:encumbrance-bakery:$version",
+                    "net.corda.demo.common:encumbrance-common:$version",
+
+                    "net.corda.demo.sc:encumbrance-state-contract:$version"]
+        rpcUsers = [[user: "user1", "password": "test", "permissions": ["ALL"]]]
+    }
+    node {
+        name "O=BuyerA,L=New York,C=US"
+        rpcSettings {
+            address("localhost:" + project["BuyerA_rpcPort"])
+            adminAddress("localhost:10049")
+        }
+        p2pPort 10006
+        cordapps = [
+                "net.corda.demo.buyer:encumbrance-buyer:$version",
+                    "net.corda.demo.common:encumbrance-common:$version",
+                    "net.corda.demo.sc:encumbrance-state-contract:$version"]
+        rpcUsers = [[user: "user1", "password": "test", "permissions": ["ALL"]]]
+    }
+    node {
+        name "O=BuyerB,L=Liverpool,C=GB"
+        p2pPort 10007
+        rpcSettings {
+            address("localhost:" + project["BuyerB_rpcPort"])
+            adminAddress("localhost:10054")
+        }
+        cordapps = ["net.corda.demo.buyer:encumbrance-buyer:$version",
+                    "net.corda.demo.common:encumbrance-common:$version",
+                    "net.corda.demo.sc:encumbrance-state-contract:$version"]
+        rpcUsers = [[user: "user1", "password": "test", "permissions": ["ALL"]]]
+    }
+
+}
